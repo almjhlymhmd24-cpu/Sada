@@ -1,0 +1,51 @@
+name: sada
+description: "منصة صدى - تحويل النص إلى كلام لدعم فئةالبكم"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  flutter_tts: ^4.0.2
+  google_fonts: ^6.2.1
+  provider: ^6.1.2
+  lottie: ^3.1.2
+  flutter_svg: ^2.0.17
+  image_picker: ^1.2.0
+  speech_to_text: ^7.3.0  
+  http_parser: ^4.1.2
+  path: ^1.9.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  
+  fonts:
+    - family: Baloo_Bhaijaan_2
+      fonts:
+        - asset: assets/fonts/Baloo_Bhaijaan_2/BalooBhaijaan2-VariableFont_wght.ttf
+
+  assets:
+   - assets/logo.svg
+   - assets/Sparkles_animation.json
+   - assets/people_illustration.svg
+   - assets/google_icon.svg
+   - assets/Voicemail.json
+   - assets/Business handshake.json
+   - assets/mic.json
+   - assets/Pronounce Animation.json
+   - assets/Ai Robot Vector Art.json
+   - assets/Ai Stars.json
+   - assets/images/
+   - assets/icons/
+
