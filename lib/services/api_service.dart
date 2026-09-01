@@ -378,4 +378,104 @@ class ApiService {
       client.close();
     }
   }
+
+  // ===== AI Chat =====
+  static Future<String> sendChatMessage(String message) async {
+    final client = _createHttpClient();
+
+    try {
+      final text = message.trim();
+
+      if (text.isEmpty) {
+        throw const FormatException('الرسالة فارغة.');
+      }
+
+      final url = Uri.parse('$baseUrl/ai/chat');
+
+      debugPrint('========== AI CHAT ==========');
+      debugPrint('POST: $url');
+      debugPrint('MESSAGE: $text');
+
+      final response = await client
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: jsonEncode({
+              'message': text,
+            }),
+          )
+          .timeout(
+            const Duration(seconds: 90),
+          );
+
+      debugPrint('CHAT STATUS: ${response.statusCode}');
+      debugPrint('CHAT RESPONSE: ${response.body}');
+
+      final decoded = jsonDecode(
+        utf8.decode(response.bodyBytes),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (decoded is! Map<String, dynamic>) {
+          throw const FormatException(
+            'استجابة المحادثة غير صالحة.',
+          );
+        }
+
+        if (decoded['success'] != true) {
+          throw Exception(
+            decoded['message']?.toString() ??
+                'فشل الحصول على رد من الذكاء الاصطناعي.',
+          );
+        }
+
+        final reply = decoded['message']?.toString().trim();
+
+        if (reply == null || reply.isEmpty) {
+          throw const FormatException(
+            'الرد من الذكاء الاصطناعي فارغ.',
+          );
+        }
+
+        debugPrint('✅ AI CHAT SUCCESS');
+
+        return reply;
+      }
+
+      String errorMessage = 'حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.';
+
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['message']?.toString() ??
+            decoded['error']?.toString() ??
+            errorMessage;
+      }
+
+      throw HttpException(
+        '$errorMessage (HTTP ${response.statusCode})',
+      );
+    } on TimeoutException {
+      debugPrint('⏰ AI Chat timeout');
+
+      throw Exception(
+        'استغرق الذكاء الاصطناعي وقتًا طويلًا للرد.',
+      );
+    } on FormatException catch (e) {
+      debugPrint('⚠️ AI Chat format error: $e');
+      rethrow;
+    } on SocketException catch (e) {
+      debugPrint('🌐 AI Chat network error: $e');
+
+      throw Exception(
+        'تعذر الاتصال بالخادم. تأكدي أن Sada API يعمل وأن الهاتف متصل بنفس الشبكة.',
+      );
+    } catch (e) {
+      debugPrint('❌ AI Chat error: $e');
+      rethrow;
+    } finally {
+      client.close();
+    }
+  }
 }

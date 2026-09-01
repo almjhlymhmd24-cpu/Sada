@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -14,96 +14,74 @@ class AiImageService {
   static String get baseUrl => ApiService.baseUrl;
 
   static Future<String> analyzeImage(File imageFile) async {
-    try {
-      // التأكد من وجود الملف
-      if (!await imageFile.exists()) {
-        throw const FileSystemException(
-          'ملف الصورة غير موجود',
+    if (!await imageFile.exists()) {
+      throw const FileSystemException(
+        'ملف الصورة غير موجود',
+      );
+    }
+
+    final fileName = path.basename(imageFile.path);
+    final extension = path.extension(imageFile.path).toLowerCase();
+
+    String subtype;
+
+    switch (extension) {
+      case '.jpg':
+      case '.jpeg':
+        subtype = 'jpeg';
+        break;
+
+      case '.png':
+        subtype = 'png';
+        break;
+
+      case '.webp':
+        subtype = 'webp';
+        break;
+
+      default:
+        throw FormatException(
+          'صيغة الصورة غير مدعومة: $extension',
         );
-      }
+    }
 
-      // اسم الملف
-      final fileName = path.basename(imageFile.path);
+    final contentType = MediaType(
+      'image',
+      subtype,
+    );
 
-      // امتداد الملف
-      final extension = path.extension(imageFile.path).toLowerCase();
+    final uri = Uri.parse(
+      '$baseUrl/ai/analyze-image',
+    );
 
-      // تحديد نوع الصورة
-      String subtype;
+    debugPrint('================================');
+    debugPrint('🖼️ Image file: $fileName');
+    debugPrint('🖼️ Extension: $extension');
+    debugPrint('🖼️ Content-Type: image/$subtype');
+    debugPrint('📤 API: $uri');
+    debugPrint('================================');
 
-      switch (extension) {
-        case '.jpg':
-        case '.jpeg':
-          subtype = 'jpeg';
-          break;
+    final request = http.MultipartRequest(
+      'POST',
+      uri,
+    );
 
-        case '.png':
-          subtype = 'png';
-          break;
+    final multipartFile = await http.MultipartFile.fromPath(
+      'image',
+      imageFile.path,
+      filename: fileName,
+      contentType: contentType,
+    );
 
-        case '.webp':
-          subtype = 'webp';
-          break;
+    request.files.add(multipartFile);
 
-        default:
-          throw FormatException(
-            'صيغة الصورة غير مدعومة: $extension',
-          );
-      }
+    debugPrint('📤 إرسال الصورة إلى API...');
 
-      final contentType = MediaType(
-        'image',
-        subtype,
-      );
-
-      debugPrint('================================');
-      debugPrint('🖼️ Image file: $fileName');
-      debugPrint('🖼️ Extension: $extension');
-      debugPrint('🖼️ Content-Type: image/$subtype');
-      debugPrint('================================');
-
-      // رابط الـ API
-      final uri = Uri.parse(
-        '$baseUrl/ai/analyze-image',
-      );
-
-      // إنشاء Multipart Request
-      final request = http.MultipartRequest(
-        'POST',
-        uri,
-      );
-
-      // إضافة الصورة
-      final multipartFile = await http.MultipartFile.fromPath(
-        'image',
-        imageFile.path,
-        filename: fileName,
-        contentType: contentType,
-      );
-
-      request.files.add(
-        multipartFile,
-      );
-
-      debugPrint(
-        '📤 إرسال الصورة إلى: $uri',
-      );
-
-      debugPrint(
-        '📤 Field: image',
-      );
-
-      debugPrint(
-        '📤 Filename: $fileName',
-      );
-
-      debugPrint(
-        '📤 Content-Type: image/$subtype',
-      );
-
-      // إرسال الطلب
+    try {
+      // Backend ينتظر حتى 90 ثانية،
+      // لذلك نعطي Flutter مهلة أكبر قليلًا.
       final streamedResponse = await request.send().timeout(
-            const Duration(seconds: 60),
+            const Duration(seconds: 110),
           );
 
       final response = await http.Response.fromStream(
@@ -118,7 +96,6 @@ class AiImageService {
         '📥 Response: ${response.body}',
       );
 
-      // فشل HTTP
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw HttpException(
           'AI API returned '
@@ -128,11 +105,8 @@ class AiImageService {
         );
       }
 
-      // قراءة JSON
       final decoded = jsonDecode(
-        utf8.decode(
-          response.bodyBytes,
-        ),
+        utf8.decode(response.bodyBytes),
       );
 
       if (decoded is! Map<String, dynamic>) {
@@ -141,14 +115,12 @@ class AiImageService {
         );
       }
 
-      // التحقق من نجاح العملية
       if (decoded['success'] != true) {
         throw Exception(
           decoded['message']?.toString() ?? 'حدث خطأ أثناء تحليل الصورة',
         );
       }
 
-      // استخراج النص
       final text = decoded['text']?.toString().trim();
 
       if (text == null || text.isEmpty) {
@@ -157,16 +129,44 @@ class AiImageService {
         );
       }
 
+      debugPrint('✅ تم تحليل الصورة بنجاح');
+
       return text;
     } on TimeoutException catch (e) {
       debugPrint(
-        '⚠️ انتهت مهلة تحليل الصورة: $e',
+        '⏰ انتهت مهلة تحليل الصورة: $e',
       );
+
+      throw Exception(
+        'استغرق تحليل الصورة وقتًا أطول من المتوقع. '
+        'يرجى المحاولة مرة أخرى.',
+      );
+    } on SocketException catch (e) {
+      debugPrint(
+        '🌐 خطأ في الاتصال أثناء تحليل الصورة: $e',
+      );
+
+      throw Exception(
+        'تعذر الاتصال بخادم Sada API. '
+        'تأكدي أن الخادم يعمل وأن الهاتف متصل بنفس الشبكة.',
+      );
+    } on HttpException catch (e) {
+      debugPrint(
+        '❌ خطأ HTTP أثناء تحليل الصورة: $e',
+      );
+
+      rethrow;
+    } on FormatException catch (e) {
+      debugPrint(
+        '⚠️ استجابة تحليل الصورة غير صالحة: $e',
+      );
+
       rethrow;
     } catch (e) {
       debugPrint(
-        '⚠️ خطأ في خدمة تحليل الصور: $e',
+        '❌ خطأ في خدمة تحليل الصور: $e',
       );
+
       rethrow;
     }
   }
