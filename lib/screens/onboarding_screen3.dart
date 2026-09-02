@@ -79,7 +79,7 @@ class OnboardingScreen3 extends StatelessWidget {
                 child: Center(
                   child: Lottie.asset(
                     'assets/mic.json',
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     repeat: true,
                   ),
                 ),
