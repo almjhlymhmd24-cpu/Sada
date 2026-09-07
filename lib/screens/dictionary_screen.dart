@@ -172,7 +172,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   // ADD PHRASE
   // ============================================================
 
-  void _showAddPhraseDialog() {
+  Future<void> _showAddPhraseDialog() async {
     if (_categories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -182,243 +182,273 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
           ),
         ),
       );
-
       return;
     }
 
     final textController = TextEditingController();
 
-    Category selectedCat = _selectedCategory ?? _categories.first;
+    Category selectedCat = _categories.firstWhere(
+      (c) => c.categoryId == _selectedCategory?.categoryId,
+      orElse: () => _categories.first,
+    );
 
-    showModalBottomSheet(
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
+        bool isSaving = false;
+
         return StatefulBuilder(
           builder: (modalContext, setModalState) {
             return Directionality(
               textDirection: TextDirection.rtl,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(modalContext).viewInsets.bottom,
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(28),
-                    ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(modalContext).viewInsets.bottom,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Handle
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(28),
                         ),
                       ),
-
-                      const SizedBox(height: 18),
-
-                      // Title
-                      const Text(
-                        'إضافة عبارة جديدة',
-                        style: TextStyle(
-                          fontFamily: 'Baloo_Bhaijaan_2',
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Text
-                      TextField(
-                        controller: textController,
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontFamily: 'Baloo_Bhaijaan_2',
-                          fontSize: 15,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'اكتب نص العبارة هنا...',
-                          hintStyle: const TextStyle(
-                            fontFamily: 'Baloo_Bhaijaan_2',
-                            color: AppColors.textMuted,
-                          ),
-                          filled: true,
-                          fillColor: AppColors.bg,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Category title
-                      const Text(
-                        'اختر الفئة:',
-                        style: TextStyle(
-                          fontFamily: 'Baloo_Bhaijaan_2',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      // Category dropdown
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.bg,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.border,
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<Category>(
-                            value: selectedCat,
-                            isExpanded: true,
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down_rounded,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Handle
+                          Center(
+                            child: Container(
+                              width: 44,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
                             ),
-                            items: _categories.map((c) {
-                              return DropdownMenuItem<Category>(
-                                value: c,
-                                child: Text(
-                                  c.name,
-                                  style: const TextStyle(
-                                    fontFamily: 'Baloo_Bhaijaan_2',
-                                    fontSize: 14,
+                          ),
+
+                          const SizedBox(height: 18),
+
+                          // العنوان
+                          const Text(
+                            'إضافة عبارة جديدة',
+                            style: TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // نص العبارة
+                          TextField(
+                            controller: textController,
+                            textAlign: TextAlign.right,
+                            enabled: !isSaving,
+                            maxLines: 3,
+                            minLines: 1,
+                            style: const TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 15,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'اكتب نص العبارة هنا...',
+                              hintStyle: const TextStyle(
+                                fontFamily: 'Baloo_Bhaijaan_2',
+                                color: AppColors.textMuted,
+                              ),
+                              filled: true,
+                              fillColor: AppColors.bg,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  16,
+                                ),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          const Text(
+                            'اختر الفئة:',
+                            style: TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          // اختيار الفئة
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.bg,
+                              borderRadius: BorderRadius.circular(
+                                16,
+                              ),
+                              border: Border.all(
+                                color: AppColors.border,
+                              ),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<Category>(
+                                value: selectedCat,
+                                isExpanded: true,
+                                icon: const Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                ),
+                                items: _categories.map((c) {
+                                  return DropdownMenuItem<Category>(
+                                    value: c,
+                                    child: Text(
+                                      c.name,
+                                      style: const TextStyle(
+                                        fontFamily: 'Baloo_Bhaijaan_2',
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: isSaving
+                                    ? null
+                                    : (cat) {
+                                        if (cat == null) {
+                                          return;
+                                        }
+
+                                        setModalState(() {
+                                          selectedCat = cat;
+                                        });
+                                      },
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // زر الحفظ
+                          ElevatedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final text = textController.text.trim();
+
+                                    if (text.isEmpty) {
+                                      ScaffoldMessenger.of(modalContext)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'اكتب نص العبارة أولاً',
+                                            textAlign: TextAlign.right,
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    // إخفاء الكيبورد
+                                    FocusScope.of(modalContext).unfocus();
+
+                                    // التحميل داخل النافذة فقط
+                                    setModalState(() {
+                                      isSaving = true;
+                                    });
+
+                                    final success =
+                                        await ApiService.createPhrase(
+                                      text: text,
+                                      userId:
+                                          ApiService.currentUser?.userId ?? 1,
+                                      categoryId: selectedCat.categoryId,
+                                    );
+
+                                    // ربما المستخدم أغلق
+                                    // النافذة أثناء الطلب
+                                    if (!modalContext.mounted) {
+                                      return;
+                                    }
+
+                                    if (success) {
+                                      // أغلق النافذة بعد
+                                      // نجاح الطلب
+                                      Navigator.of(modalContext).pop(true);
+                                    } else {
+                                      setModalState(() {
+                                        isSaving = false;
+                                      });
+
+                                      ScaffoldMessenger.of(modalContext)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'تعذر إضافة العبارة، حاول مجدداً',
+                                            textAlign: TextAlign.right,
+                                          ),
+                                          backgroundColor: Colors.redAccent,
+                                        ),
+                                      );
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryPurple,
+                              disabledBackgroundColor:
+                                  AppColors.primaryPurple.withValues(
+                                alpha: 0.6,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  16,
+                                ),
+                              ),
+                            ),
+                            child: isSaving
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'حفظ العبارة',
+                                    style: TextStyle(
+                                      fontFamily: 'Baloo_Bhaijaan_2',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (cat) {
-                              if (cat == null) return;
-
-                              setModalState(() {
-                                selectedCat = cat;
-                              });
-                            },
                           ),
-                        ),
+
+                          const SizedBox(height: 8),
+                        ],
                       ),
-
-                      const SizedBox(height: 20),
-
-                      // Save button
-                      ElevatedButton(
-                        onPressed: () async {
-                          final text = textController.text.trim();
-
-                          if (text.isEmpty) {
-                            return;
-                          }
-
-                          // Close the sheet first.
-                          Navigator.of(sheetContext).pop();
-
-                          // Make sure State is still alive.
-                          if (!mounted) return;
-
-                          setState(() {
-                            _isLoading = true;
-                          });
-
-                          final success = await ApiService.createPhrase(
-                            text: text,
-                            userId: ApiService.currentUser?.userId ?? 1,
-                            categoryId: selectedCat.categoryId,
-                          );
-
-                          // IMPORTANT:
-                          // The State may have been disposed
-                          // while waiting for the API.
-                          if (!mounted) return;
-
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'تمت إضافة العبارة بنجاح 🎉',
-                                  textAlign: TextAlign.right,
-                                ),
-                                backgroundColor: AppColors.primaryPurple,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            );
-
-                            // Reload data.
-                            await _loadData();
-                          } else {
-                            if (!mounted) return;
-
-                            setState(() {
-                              _isLoading = false;
-                            });
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text(
-                                  'تعذر إضافة العبارة، حاول مجدداً',
-                                  textAlign: TextAlign.right,
-                                ),
-                                backgroundColor: Colors.redAccent,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryPurple,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          'حفظ العبارة',
-                          style: TextStyle(
-                            fontFamily: 'Baloo_Bhaijaan_2',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -426,9 +456,29 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
           },
         );
       },
-    ).whenComplete(() {
-      textController.dispose();
+    ).then((result) async {
+      // لا نعيد بناء الصفحة إلا بعد إغلاق
+      // الـ BottomSheet بالكامل
+      if (result == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'تمت إضافة العبارة بنجاح 🎉',
+              textAlign: TextAlign.right,
+            ),
+            backgroundColor: AppColors.primaryPurple,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        await _loadData();
+      }
     });
+
+    textController.dispose();
   }
 
   // ============================================================
