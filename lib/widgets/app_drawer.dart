@@ -1,284 +1,346 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+
 import '../screens/home_screen.dart';
 import '../screens/dictionary_screen.dart';
-import '../screens/chat_screen.dart';
 import '../screens/tts_screen.dart';
-import '../screens/ai_assistant_screen.dart';
+import '../screens/chat_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/login_screen.dart';
-import '../services/api_service.dart';
 
 class SadaDrawer extends StatelessWidget {
   final int activeIndex;
 
-  const SadaDrawer({super.key, this.activeIndex = 0});
+  const SadaDrawer({
+    super.key,
+    required this.activeIndex,
+  });
+
+  static const String logoAsset = 'assets/logo.svg';
+
+  void _navigate(
+    BuildContext context,
+    Widget page,
+  ) {
+    Navigator.pop(context);
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => page,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = ApiService.currentUser;
-    final userName = user?.fullName.isNotEmpty == true ? user!.fullName : 'مستخدم صدى';
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Drawer(
-        backgroundColor: AppColors.bg,
         width: MediaQuery.of(context).size.width * 0.82,
+        backgroundColor: AppColors.bg,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.horizontal(
-            left: Radius.circular(28),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(28),
+            bottomLeft: Radius.circular(28),
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // ==============================
+              // =================================================
               // HEADER
-              // ==============================
+              // =================================================
+
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.heroGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
+                margin: const EdgeInsets.fromLTRB(
+                  12,
+                  12,
+                  12,
+                  0,
+                ),
+                padding: const EdgeInsets.fromLTRB(
+                  18,
+                  20,
+                  18,
+                  18,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: [
+                      Color(0xFF34C9D5),
+                      Color(0xFF2D84E2),
+                      Color(0xFF2949D7),
+                    ],
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryBlue.withValues(
+                        alpha: 0.15,
+                      ),
+                      blurRadius: 22,
+                      offset: const Offset(
+                        0,
+                        9,
+                      ),
+                    ),
+                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                    // الشعار
+                    Container(
+                      width: 62,
+                      height: 62,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(
+                          alpha: 0.16,
+                        ),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(
+                            alpha: 0.28,
                           ),
-                          child: const Icon(
+                          width: 1.5,
+                        ),
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/logo.svg',
+                        fit: BoxFit.contain,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
+                        placeholderBuilder: (_) {
+                          return const Icon(
                             Icons.graphic_eq_rounded,
-                            color: AppColors.primaryPurple,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'صدى | Sada AI',
-                              style: TextStyle(
-                                fontFamily: 'Baloo_Bhaijaan_2',
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            Text(
-                              'مساعدك الذكي للتواصل',
-                              style: TextStyle(
-                                fontFamily: 'Baloo_Bhaijaan_2',
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'مرحباً بك $userName 👋',
-                      style: const TextStyle(
-                        fontFamily: 'Baloo_Bhaijaan_2',
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            size: 30,
+                          );
+                        },
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'اختر الخدمة أو الأداة المطلوبة',
-                      style: TextStyle(
-                        fontFamily: 'Baloo_Bhaijaan_2',
-                        color: Colors.white70,
-                        fontSize: 12.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 12),
+                    const SizedBox(width: 14),
 
-              // ==============================
-              // MENU ITEMS
-              // ==============================
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    _drawerItem(
-                      context,
-                      icon: Icons.home_rounded,
-                      title: 'الرئيسية',
-                      selected: activeIndex == 0,
-                      onTap: () {
-                        Navigator.pop(context);
-                        if (activeIndex != 0) {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (_) => const HomeScreen()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.menu_book_rounded,
-                      title: 'القاموس الإشاري',
-                      selected: activeIndex == 1,
-                      onTap: () {
-                        Navigator.pop(context);
-                        if (activeIndex != 1) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const DictionaryScreen()),
-                          );
-                        }
-                      },
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.record_voice_over_rounded,
-                      title: 'تحويل النص إلى كلام',
-                      selected: activeIndex == 2,
-                      onTap: () {
-                        Navigator.pop(context);
-                        if (activeIndex != 2) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const TtsScreen()),
-                          );
-                        }
-                      },
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.chat_bubble_rounded,
-                      title: 'المحادثات الذكية',
-                      selected: activeIndex == 3,
-                      onTap: () {
-                        Navigator.pop(context);
-                        if (activeIndex != 3) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ChatScreen()),
-                          );
-                        }
-                      },
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.auto_awesome_rounded,
-                      title: 'مساعد الذكاء الاصطناعي',
-                      selected: activeIndex == 5,
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AiAssistantScreen(),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'صدى',
+                            style: TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
                           ),
-                        );
-                      },
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      child: Divider(color: AppColors.border),
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.person_rounded,
-                      title: 'الملف الشخصي',
-                      selected: activeIndex == 4,
-                      onTap: () {
-                        Navigator.pop(context);
-                        if (activeIndex != 4) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                          );
-                        }
-                      },
-                    ),
-                    _drawerItem(
-                      context,
-                      icon: Icons.info_outline_rounded,
-                      title: 'عن تطبيق صدى',
-                      onTap: () {
-                        Navigator.pop(context);
-                        showAboutDialog(
-                          context: context,
-                          applicationName: 'منصة صدى (Sada)',
-                          applicationVersion: '1.0.0',
-                          applicationLegalese: 'منصة صدى لدعم التواصل الصوتي والترجمة الإشارية بالذكاء الاصطناعي',
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              // ==============================
-              // LOGOUT
-              // ==============================
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: _drawerItem(
-                  context,
-                  icon: Icons.logout_rounded,
-                  title: 'تسجيل الخروج',
-                  danger: true,
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        title: const Text('تسجيل الخروج', textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2', fontWeight: FontWeight.bold)),
-                        content: const Text('هل أنت متأكد من رغبتك في تسجيل الخروج؟', textAlign: TextAlign.right, style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2')),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('إلغاء', style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2', color: AppColors.textMuted)),
+                          const SizedBox(height: 3),
+                          Text(
+                            user?.fullName ?? 'مستخدم صدى',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                          TextButton(
-                            onPressed: () {
-                              ApiService.currentUser = null;
-                              Navigator.pop(ctx);
-                              Navigator.pop(context);
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                                (route) => false,
-                              );
-                            },
-                            child: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2', color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.email ?? 'مرحباً بك في صدى',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              fontSize: 11.5,
+                              color: Colors.white.withValues(
+                                alpha: 0.82,
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // =================================================
+              // MENU
+              // =================================================
+
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                  ),
+                  children: [
+                    _drawerItem(
+                      context,
+                      index: 0,
+                      icon: Icons.home_rounded,
+                      title: 'الرئيسية',
+                      subtitle: 'العودة إلى الصفحة الرئيسية',
+                      page: const HomeScreen(),
+                    ),
+                    _drawerItem(
+                      context,
+                      index: 1,
+                      icon: Icons.menu_book_rounded,
+                      title: 'القاموس',
+                      subtitle: 'العبارات والإشارات',
+                      page: const DictionaryScreen(),
+                    ),
+                    _drawerItem(
+                      context,
+                      index: 2,
+                      icon: Icons.record_voice_over_rounded,
+                      title: 'التحويل',
+                      subtitle: 'تحويل النص والصوت',
+                      page: const TtsScreen(),
+                    ),
+                    _drawerItem(
+                      context,
+                      index: 3,
+                      icon: Icons.auto_awesome_rounded,
+                      title: 'المساعد الذكي',
+                      subtitle: 'تحدث مع صدى AI',
+                      page: const ChatScreen(),
+                    ),
+                    _drawerItem(
+                      context,
+                      index: 4,
+                      icon: Icons.person_rounded,
+                      title: 'الملف الشخصي',
+                      subtitle: 'بيانات حسابك',
+                      page: const ProfileScreen(),
+                    ),
+                  ],
+                ),
+              ),
+
+              // =================================================
+              // BOTTOM CARD
+              // =================================================
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  14,
+                  8,
+                  14,
+                  10,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.softCyan,
+                    borderRadius: BorderRadius.circular(
+                      18,
+                    ),
+                    border: Border.all(
+                      color: AppColors.border,
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.graphic_eq_rounded,
+                        color: AppColors.primaryBlue,
+                        size: 25,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'صدى يساعدك على التواصل بوضوح وسهولة',
+                          style: TextStyle(
+                            fontFamily: 'Baloo_Bhaijaan_2',
+                            color: AppColors.textDark,
+                            fontSize: 11.5,
+                            height: 1.35,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  14,
+                  0,
+                  14,
+                  14,
+                ),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(
+                    16,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(
+                      16,
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+
+                      // هنا نربط تسجيل الخروج الحقيقي لاحقاً
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          16,
+                        ),
+                        border: Border.all(
+                          color: AppColors.border,
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.logout_rounded,
+                            color: AppColors.danger,
+                            size: 21,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(
+                              fontFamily: 'Baloo_Bhaijaan_2',
+                              color: AppColors.danger,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            color: AppColors.textMuted,
+                            size: 13,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -288,53 +350,129 @@ class SadaDrawer extends StatelessWidget {
     );
   }
 
+  // ============================================================
+  // DRAWER ITEM
+  // ============================================================
+
   Widget _drawerItem(
     BuildContext context, {
+    required int index,
     required IconData icon,
     required String title,
-    required VoidCallback onTap,
-    bool selected = false,
-    bool danger = false,
+    required String subtitle,
+    required Widget page,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: selected ? AppColors.softPurple : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+    final active = activeIndex == index;
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        bottom: 7,
       ),
-      child: ListTile(
-        onTap: onTap,
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        leading: Icon(
-          icon,
-          color: danger
-              ? Colors.redAccent
-              : selected
-                  ? AppColors.primaryPurple
-                  : AppColors.textMuted,
-          size: 22,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(
+          18,
         ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontFamily: 'Baloo_Bhaijaan_2',
-            fontSize: 14.5,
-            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-            color: danger
-                ? Colors.redAccent
-                : selected
-                    ? AppColors.primaryPurple
-                    : AppColors.textDark,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(
+            18,
+          ),
+          onTap: () {
+            _navigate(
+              context,
+              page,
+            );
+          },
+          child: AnimatedContainer(
+            duration: const Duration(
+              milliseconds: 220,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 13,
+              vertical: 11,
+            ),
+            decoration: BoxDecoration(
+              gradient: active
+                  ? const LinearGradient(
+                      begin: Alignment.centerRight,
+                      end: Alignment.centerLeft,
+                      colors: [
+                        AppColors.softCyan,
+                        AppColors.softBlue,
+                      ],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(
+                18,
+              ),
+              border: Border.all(
+                color: active
+                    ? AppColors.primaryBlue.withValues(
+                        alpha: 0.16,
+                      )
+                    : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: active ? AppColors.navActiveGradient : null,
+                    color: active ? null : Colors.white,
+                    borderRadius: BorderRadius.circular(
+                      13,
+                    ),
+                    border: active
+                        ? null
+                        : Border.all(
+                            color: AppColors.border,
+                          ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 21,
+                    color: active ? Colors.white : AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontFamily: 'Baloo_Bhaijaan_2',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: active
+                              ? AppColors.primaryBlue
+                              : AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontFamily: 'Baloo_Bhaijaan_2',
+                          fontSize: 10.5,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 13,
+                  color: active ? AppColors.primaryBlue : AppColors.textMuted,
+                ),
+              ],
+            ),
           ),
         ),
-        trailing: selected
-            ? const Icon(
-                Icons.chevron_left_rounded,
-                color: AppColors.primaryPurple,
-                size: 20,
-              )
-            : null,
       ),
     );
   }

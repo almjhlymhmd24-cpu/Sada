@@ -207,12 +207,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _showSuccessAndGoBack();
       } else {
         setState(() => _isLoading = false);
-        _showError('تعذر إنشاء الحساب، يرجى التأكد من البيانات أو أن البريد غير مستخدم مسبقاً');
+        final err = ApiService.lastAuthError ??
+            'تعذر إنشاء الحساب، يرجى التأكد من البيانات أو أن البريد غير مستخدم مسبقاً';
+        _showError(err);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showError('تعذر الاتصال بالخادم، تأكدي من الإنترنت وحاولي مرة أخرى');
+      final err = ApiService.lastAuthError ??
+          'تعذر الاتصال بالخادم، تأكدي من الإنترنت وحاولي مرة أخرى';
+      _showError(err);
     }
   }
 

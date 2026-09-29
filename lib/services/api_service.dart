@@ -10,15 +10,56 @@ import '../models/models.dart';
 
 /// خدمة الاتصال بـ Sada Web API
 class ApiService {
+  // عنوان مخصص للـ API يمكن تعديله من واجهة التطبيق
+  static String? customBaseUrl;
+
+  // القيمة الافتراضية لـ IP جهاز الكمبيوتر على الشبكة المحلية الحالية
+  static String defaultAndroidHost = '192.168.96.34';
+  static int defaultPort = 54707;
+
   // للتشغيل على Windows / Web استخدمي localhost
   // للتشغيل على محاكي Android استخدمي 10.0.2.2
   // للتشغيل على جهاز جوال حقيقي استخدمي IP جهاز الكمبيوتر
   static String get baseUrl {
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://192.168.213.34:54707/api';
+    if (customBaseUrl != null && customBaseUrl!.trim().isNotEmpty) {
+      return customBaseUrl!.trim();
     }
 
-    return 'http://localhost:54707/api';
+    if (!kIsWeb && Platform.isAndroid) {
+      return 'http://$defaultAndroidHost:$defaultPort/api';
+    }
+
+    return 'http://localhost:$defaultPort/api';
+  }
+
+  /// آخر رسالة خطأ وردت من عمليات المصادقة
+  static String? lastAuthError;
+
+  /// فحص الاتصال بالخادم والتحقق من استجابته
+  static Future<bool> testConnection([String? testUrl]) async {
+    final client = _createHttpClient();
+    final target = testUrl ?? '$baseUrl/Categories';
+    try {
+      final res = await client
+          .get(Uri.parse(target))
+          .timeout(const Duration(seconds: 4));
+      return res.statusCode >= 200 && res.statusCode < 500;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// تسجيل دخول كزائر / تجربة سريعة عند تعذر الاتصال بالخادم
+  static AppUser loginAsGuest({String name = 'زائر صدى'}) {
+    currentUser = AppUser(
+      userId: 999,
+      fullName: name,
+      email: 'guest@sada.app',
+      phoneNumber: '0500000000',
+    );
+    return currentUser!;
   }
 
   // إنشاء عميل HTTP
@@ -96,6 +137,7 @@ class ApiService {
           userId: 1,
           categoryId: 3,
           categoryName: 'التحيات والترحيب',
+          signImageUrl: 'assets/images/hello.png',
         ),
         Phrase(
           phraseId: 2,
@@ -103,6 +145,7 @@ class ApiService {
           userId: 1,
           categoryId: 3,
           categoryName: 'التحيات والترحيب',
+          signImageUrl: 'assets/images/hello.png',
         ),
         Phrase(
           phraseId: 3,
@@ -110,6 +153,7 @@ class ApiService {
           userId: 1,
           categoryId: 3,
           categoryName: 'التحيات والترحيب',
+          signImageUrl: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=500&q=80',
         ),
         Phrase(
           phraseId: 4,
@@ -117,6 +161,7 @@ class ApiService {
           userId: 1,
           categoryId: 3,
           categoryName: 'التحيات والترحيب',
+          signImageUrl: 'assets/images/thanks.png',
         ),
         Phrase(
           phraseId: 5,
@@ -124,6 +169,7 @@ class ApiService {
           userId: 1,
           categoryId: 1,
           categoryName: 'الروتين اليومي',
+          signImageUrl: 'assets/images/yes.png',
         ),
         Phrase(
           phraseId: 6,
@@ -131,6 +177,7 @@ class ApiService {
           userId: 1,
           categoryId: 1,
           categoryName: 'الروتين اليومي',
+          signImageUrl: 'assets/images/no.png',
         ),
         Phrase(
           phraseId: 7,
@@ -138,6 +185,7 @@ class ApiService {
           userId: 1,
           categoryId: 4,
           categoryName: 'الصحة والعلاج',
+          signImageUrl: 'assets/images/sorry.png',
         ),
         Phrase(
           phraseId: 8,
@@ -145,6 +193,7 @@ class ApiService {
           userId: 1,
           categoryId: 5,
           categoryName: 'المجتمع والعمل',
+          signImageUrl: 'assets/images/sorry.png',
         ),
         Phrase(
           phraseId: 9,
@@ -152,6 +201,7 @@ class ApiService {
           userId: 1,
           categoryId: 5,
           categoryName: 'المجتمع والعمل',
+          signImageUrl: 'assets/images/thanks.png',
         ),
       ];
 
@@ -444,6 +494,7 @@ class ApiService {
     String? phoneNumber,
   }) async {
     final client = _createHttpClient();
+    lastAuthError = null;
 
     try {
       final url = Uri.parse(
@@ -453,7 +504,6 @@ class ApiService {
       debugPrint(
         '========== REGISTER ==========',
       );
-
       debugPrint(
         'POST: $url',
       );
@@ -473,22 +523,19 @@ class ApiService {
             }),
           )
           .timeout(
-            const Duration(seconds: 30),
+            const Duration(seconds: 15),
           );
 
+      final responseText = utf8.decode(res.bodyBytes);
       debugPrint(
         'REGISTER STATUS: ${res.statusCode}',
       );
-
       debugPrint(
-        'REGISTER RESPONSE: '
-        '${utf8.decode(res.bodyBytes)}',
+        'REGISTER RESPONSE: $responseText',
       );
 
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        final decoded = jsonDecode(
-          utf8.decode(res.bodyBytes),
-        );
+        final decoded = jsonDecode(responseText);
 
         if (decoded is Map<String, dynamic>) {
           currentUser = AppUser.fromJson(
@@ -499,28 +546,34 @@ class ApiService {
         }
       }
 
-      debugPrint(
-        'REGISTER FAILED: ${res.statusCode}',
-      );
+      // تحليل سبب الخطأ بدقة
+      if (responseText.toLowerCase().contains('already exists') ||
+          responseText.contains('مسجل مسبقاً')) {
+        lastAuthError = 'البريد الإلكتروني مسجل مسبقاً، الرجاء استخدام بريد آخر أو تسجيل الدخول.';
+      } else {
+        try {
+          final decoded = jsonDecode(responseText);
+          if (decoded is Map<String, dynamic>) {
+            final msg = decoded['message']?.toString() ??
+                decoded['title']?.toString() ??
+                decoded['error']?.toString();
+            if (msg != null && msg.isNotEmpty) {
+              lastAuthError = msg;
+            }
+          }
+        } catch (_) {}
+      }
 
+      lastAuthError ??= 'فشل إنشاء الحساب (${res.statusCode})، تأكد من صحة البيانات أو حاول لاحقاً.';
       return null;
-    } on TimeoutException catch (e) {
-      debugPrint(
-        'REGISTER TIMEOUT: $e',
-      );
-
+    } on TimeoutException {
+      lastAuthError = 'انتهت مهلة الاتصال بالخادم ($baseUrl). تأكد أن الخادم يعمل وليس معلقاً.';
       return null;
-    } on SocketException catch (e) {
-      debugPrint(
-        'REGISTER NETWORK ERROR: $e',
-      );
-
+    } on SocketException {
+      lastAuthError = 'تعذر الاتصال بالخادم على ($baseUrl). تأكد أن تطبيق Sada API يعمل وأن الجوال متصل بنفس الشبكة.';
       return null;
     } catch (e) {
-      debugPrint(
-        'REGISTER ERROR: $e',
-      );
-
+      lastAuthError = 'خطأ أثناء إنشاء الحساب: $e';
       return null;
     } finally {
       client.close();
@@ -536,6 +589,7 @@ class ApiService {
     required String password,
   }) async {
     final client = _createHttpClient();
+    lastAuthError = null;
 
     try {
       final url = Uri.parse(
@@ -545,7 +599,6 @@ class ApiService {
       debugPrint(
         '========== LOGIN ==========',
       );
-
       debugPrint(
         'Login URL: $url',
       );
@@ -563,22 +616,19 @@ class ApiService {
             }),
           )
           .timeout(
-            const Duration(seconds: 30),
+            const Duration(seconds: 15),
           );
 
+      final responseText = utf8.decode(res.bodyBytes);
       debugPrint(
         'Login Status: ${res.statusCode}',
       );
-
       debugPrint(
-        'Login Response: '
-        '${utf8.decode(res.bodyBytes)}',
+        'Login Response: $responseText',
       );
 
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        final decoded = jsonDecode(
-          utf8.decode(res.bodyBytes),
-        );
+        final decoded = jsonDecode(responseText);
 
         if (decoded is! Map<String, dynamic>) {
           throw const FormatException(
@@ -597,35 +647,30 @@ class ApiService {
         return currentUser;
       }
 
-      debugPrint(
-        '⚠️ Login rejected by API: '
-        '${res.statusCode}',
-      );
+      if (res.statusCode == 401) {
+        try {
+          final decoded = jsonDecode(responseText);
+          if (decoded is Map<String, dynamic> && decoded['message'] != null) {
+            lastAuthError = decoded['message'].toString();
+          }
+        } catch (_) {}
+        lastAuthError ??= 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        return null;
+      }
 
+      lastAuthError = 'رفض الخادم تسجيل الدخول (${res.statusCode})';
       return null;
-    } on TimeoutException catch (e) {
-      debugPrint(
-        '⚠️ Login timed out: $e',
-      );
-
+    } on TimeoutException {
+      lastAuthError = 'انتهت مهلة الاتصال بالخادم ($baseUrl). تأكد أن خادم API يعمل وليس في وضع إيقاف مؤقت.';
       return null;
-    } on SocketException catch (e) {
-      debugPrint(
-        '🌐 Login network error: $e',
-      );
-
+    } on SocketException {
+      lastAuthError = 'تعذر الاتصال بالخادم على ($baseUrl). تأكد من تشغيل Sada API ومن أن الهاتف متصل بنفس الشبكة.';
       return null;
     } on FormatException catch (e) {
-      debugPrint(
-        '⚠️ Invalid login response: $e',
-      );
-
+      lastAuthError = 'استجابة غير متوقعة من الخادم: $e';
       return null;
     } catch (e) {
-      debugPrint(
-        '⚠️ Login API error: $e',
-      );
-
+      lastAuthError = 'خطأ أثناء تسجيل الدخول: $e';
       return null;
     } finally {
       client.close();

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:lottie/lottie.dart';
 
 import '../services/api_service.dart';
 import '../services/tts_service.dart';
@@ -202,7 +203,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // ============================================================
   // TTS
   // ============================================================
-
   Future<void> _speakMessage(
     int index,
     String text,
@@ -219,6 +219,23 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    // تنظيف النص قبل النطق:
+    // يسمح فقط بالحروف العربية والإنجليزية والمسافات
+    final cleanText = text
+        .replaceAll(
+          RegExp(r'[^ء-يA-Za-z\s\.\,\،\؟\!\:]'),
+          ' ',
+        )
+        .replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        )
+        .trim();
+    // لو بعد التنظيف ما بقي كلام
+    if (cleanText.isEmpty) {
+      return;
+    }
+
     if (!mounted) return;
 
     setState(() {
@@ -226,7 +243,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      await _tts.speak(text);
+      await _tts.speak(cleanText);
     } catch (e) {
       debugPrint('⚠️ خطأ أثناء نطق الرسالة: $e');
 
@@ -409,24 +426,24 @@ class _ChatScreenState extends State<ChatScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.bg,
+        extendBodyBehindAppBar: true,
         drawer: const SadaDrawer(
           activeIndex: 3,
         ),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
+          automaticallyImplyLeading: false,
           leading: Builder(
-            builder: (context) {
-              return IconButton(
-                icon: const Icon(
-                  Icons.menu_rounded,
-                  color: AppColors.textDark,
-                ),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              );
-            },
+            builder: (context) => IconButton(
+              icon: const Icon(
+                Icons.menu_rounded,
+                color: AppColors.textDark,
+              ),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            ),
           ),
           centerTitle: true,
           title: Row(
@@ -468,38 +485,56 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(
-                    16,
-                    10,
-                    16,
-                    16,
-                  ),
-                  itemCount: _messages.length + (_isTyping ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _messages.length && _isTyping) {
-                      return _buildTypingIndicator();
-                    }
-
-                    final msg = _messages[index];
-
-                    return _buildMessageBubble(
-                      msg,
-                      index,
-                    );
-                  },
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // خلفية الأنيميشن المتدرجة تغطي كامل أبعاد الشاشة من الحافة للحافة
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.55,
+                child: Lottie.asset(
+                  'assets/gradient-background.json',
+                  fit: BoxFit.fill,
+                  width: double.infinity,
+                  height: double.infinity,
+                  alignment: Alignment.center,
                 ),
               ),
-              _buildSuggestionsBar(),
-              _buildComposer(),
-            ],
-          ),
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(
+                        16,
+                        10,
+                        16,
+                        16,
+                      ),
+                      itemCount: _messages.length + (_isTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _messages.length && _isTyping) {
+                          return _buildTypingIndicator();
+                        }
+
+                        final msg = _messages[index];
+
+                        return _buildMessageBubble(
+                          msg,
+                          index,
+                        );
+                      },
+                    ),
+                  ),
+                  _buildSuggestionsBar(),
+                  _buildComposer(),
+                ],
+              ),
+            ),
+          ],
         ),
         bottomNavigationBar: const SadaBottomNav(
           currentIndex: 3,

@@ -55,12 +55,16 @@ class _LoginScreenState extends State<LoginScreen> {
         _goToHome();
       } else {
         setState(() => _isLoading = false);
-        _showError('تعذر تسجيل الدخول، تأكد من صحة البيانات وحاول مجدداً');
+        final err = ApiService.lastAuthError ??
+            'تعذر تسجيل الدخول، تأكد من صحة البيانات وحاول مجدداً';
+        _showError(err);
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      _showError('تعذر الاتصال بالخادم، تأكدي من الإنترنت وحاولي مرة أخرى');
+      final err = ApiService.lastAuthError ??
+          'تعذر الاتصال بالخادم، تأكدي من الإنترنت وحاولي مرة أخرى';
+      _showError(err);
     }
   }
 
@@ -93,6 +97,169 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  void _showServerConfigDialog() {
+    final ipController = TextEditingController(
+      text: ApiService.customBaseUrl ?? ApiService.baseUrl,
+    );
+    bool isTesting = false;
+    String? testResult;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Directionality(
+            textDirection: TextDirection.rtl,
+            child: Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: primaryPurple.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.dns_rounded, color: primaryPurple),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'إعدادات خادم صدى (API)',
+                          style: TextStyle(
+                            fontFamily: 'Baloo_Bhaijaan_2',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'يمكنك تعديل عنوان IP الخادم إذا قمت بتغيير شبكة الواي فاي أو العمل على محاكي:',
+                    style: TextStyle(
+                      fontFamily: 'Baloo_Bhaijaan_2',
+                      fontSize: 13,
+                      color: textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: ipController,
+                    decoration: InputDecoration(
+                      labelText: 'عنوان الخادم (Base URL)',
+                      hintText: 'http://192.168.96.34:54707/api',
+                      prefixIcon: const Icon(Icons.link_rounded),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (testResult != null)
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: testResult!.startsWith('✅')
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(
+                          fontFamily: 'Baloo_Bhaijaan_2',
+                          color: testResult!.startsWith('✅')
+                              ? Colors.green.shade800
+                              : Colors.red.shade800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: isTesting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.network_check_rounded),
+                          label: const Text(
+                            'فحص الاتصال',
+                            style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2'),
+                          ),
+                          onPressed: isTesting
+                              ? null
+                              : () async {
+                                  setModalState(() {
+                                    isTesting = true;
+                                    testResult = null;
+                                  });
+                                  final ok = await ApiService.testConnection(
+                                    ipController.text.trim(),
+                                  );
+                                  setModalState(() {
+                                    isTesting = false;
+                                    testResult = ok
+                                        ? '✅ الاتصال بالخادم ناجح ومستقر!'
+                                        : '❌ تعذر الوصول للخادم. تأكد من تشغيله ومن العنوان.';
+                                  });
+                                },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryPurple,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            ApiService.customBaseUrl = ipController.text.trim();
+                            Navigator.pop(ctx);
+                            _showInfoMessage('تم حفظ عنوان الخادم بنجاح');
+                          },
+                          child: const Text(
+                            'حفظ التغيير',
+                            style: TextStyle(fontFamily: 'Baloo_Bhaijaan_2'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -114,39 +281,45 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
                 child: Column(
                   children: [
-                    // 1. شعار صدى في طرف الشاشة من الأعلى تماماً
-                    Align(
-                      alignment: Alignment.topRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'صدى',
-                              style: TextStyle(
-                                fontFamily: 'Baloo_Bhaijaan_2',
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: textDark,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            SizedBox(
-                              height: 20,
-                              child: SvgPicture.asset(
-                                'assets/logo.svg',
-                                width: 20,
-                                height: 20,
-                                placeholderBuilder: (context) => const Icon(
-                                  Icons.record_voice_over_rounded,
-                                  size: 20,
-                                  color: primaryPurple,
+                    // 1. شعار صدى في طرف الشاشة من الأعلى (بدون أي تشويه بأزرار الخادم)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onLongPress: _showServerConfigDialog,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'صدى',
+                                  style: TextStyle(
+                                    fontFamily: 'Baloo_Bhaijaan_2',
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: textDark,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  height: 24,
+                                  child: SvgPicture.asset(
+                                    'assets/logo.svg',
+                                    width: 24,
+                                    height: 24,
+                                    placeholderBuilder: (context) => const Icon(
+                                      Icons.record_voice_over_rounded,
+                                      size: 24,
+                                      color: primaryPurple,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox.shrink(),
+                        ],
                       ),
                     ),
 
@@ -369,6 +542,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 12),
+                              TextButton.icon(
+                                onPressed: () {
+                                  ApiService.loginAsGuest();
+                                  _goToHome();
+                                },
+                                icon: const Icon(
+                                  Icons.person_outline_rounded,
+                                  size: 16,
+                                  color: textMuted,
+                                ),
+                                label: const Text(
+                                  'المتابعة كزائر (بدون خادم / وضع المعاينة)',
+                                  style: TextStyle(
+                                    fontFamily: 'Baloo_Bhaijaan_2',
+                                    color: textMuted,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ],
                           ),

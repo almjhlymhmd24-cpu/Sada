@@ -78,8 +78,8 @@ class OnboardingScreen3 extends StatelessWidget {
                 flex: 5,
                 child: Center(
                   child: Lottie.asset(
-                    'assets/mic.json',
-                    fit: BoxFit.cover,
+                    'assets/Microphone Animated Icon.json',
+                    fit: BoxFit.contain,
                     repeat: true,
                   ),
                 ),

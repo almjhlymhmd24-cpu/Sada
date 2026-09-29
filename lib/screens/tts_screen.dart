@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
-import 'dart:ui';
+
 import '../services/tts_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/sada_bottom_nav.dart';
 
 /// الشاشة الأساسية لتحويل النص إلى كلام (TTS) في تطبيق صدى
+/// تم تحسينها بتصميم واسع ومريح للنظر مع الحفاظ على الهوية الأصيلة لصدى
 class TtsScreen extends StatefulWidget {
   final String? initialText;
   final String? initialCategory;
@@ -31,15 +32,15 @@ class _TtsScreenState extends State<TtsScreen>
   bool _isSpeaking = false;
   double _speechRate = 0.5;
 
-  final List<String> _quickPhrases = [
-    'السلام عليكم ورحمة الله',
-    'صباح الخير، كيف حالك؟',
-    'شكراً جزيلاً لك',
-    'أحتاج إلى مساعدة من فضلك',
-    'أنا سعيد برؤيتك اليوم',
-    'مع السلامة وفي أمان الله',
-    'هل يمكنك مساعدتي؟',
-    'أريد أن أطلب طعاماً',
+  final List<Map<String, String>> _quickPhrases = [
+    {'text': 'السلام عليكم ورحمة الله', 'icon': '👋'},
+    {'text': 'صباح الخير، كيف حالك؟', 'icon': '☀️'},
+    {'text': 'شكراً جزيلاً لك على المساعدة', 'icon': '🙏'},
+    {'text': 'أحتاج إلى مساعدة من فضلك', 'icon': '🚨'},
+    {'text': 'أنا سعيد برؤيتك اليوم', 'icon': '😊'},
+    {'text': 'مع السلامة وفي أمان الله', 'icon': '✨'},
+    {'text': 'كم سعر هذا المنتج؟', 'icon': '🛍️'},
+    {'text': 'أريد أن أطلب وجبة طعام', 'icon': '🍽️'},
   ];
 
   @override
@@ -67,6 +68,14 @@ class _TtsScreenState extends State<TtsScreen>
     };
   }
 
+  @override
+  void dispose() {
+    _ttsService.stop();
+    _textCtrl.dispose();
+    _waveController.dispose();
+    super.dispose();
+  }
+
   Future<void> _speak() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty) {
@@ -78,9 +87,7 @@ class _TtsScreenState extends State<TtsScreen>
           ),
           backgroundColor: AppColors.primaryPurple,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       );
       return;
@@ -96,7 +103,7 @@ class _TtsScreenState extends State<TtsScreen>
           content: Text('تعذر تشغيل النطق الصوتي، حاول مرة أخرى', textAlign: TextAlign.right),
         ),
       );
-      debugPrint('⚠️ خطأ أثناء تحويل النص إلى كلام: $e');
+      debugPrint('TTS Error: $e');
     }
   }
 
@@ -104,7 +111,7 @@ class _TtsScreenState extends State<TtsScreen>
     try {
       await _ttsService.stop();
     } catch (e) {
-      debugPrint('⚠️ خطأ أثناء إيقاف النطق: $e');
+      debugPrint('Stop TTS Error: $e');
     } finally {
       if (mounted) {
         setState(() => _isSpeaking = false);
@@ -119,27 +126,112 @@ class _TtsScreenState extends State<TtsScreen>
       final data = await Clipboard.getData('text/plain');
       if (!mounted) return;
       if (data != null && data.text != null && data.text!.isNotEmpty) {
-        setState(() {
-          _textCtrl.text = data.text!;
-        });
+        setState(() => _textCtrl.text = data.text!);
+        _speak();
       }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذر لصق النص من الحافظة', textAlign: TextAlign.right),
-        ),
-      );
-      debugPrint('⚠️ خطأ في الحافظة: $e');
+      debugPrint('Clipboard error: $e');
     }
   }
 
-  @override
-  void dispose() {
-    _ttsService.stop();
-    _textCtrl.dispose();
-    _waveController.dispose();
-    super.dispose();
+  void _showSignImageDialog() {
+    final text = _textCtrl.text.trim();
+    if (text.isEmpty) return;
+
+    final t = text.toLowerCase();
+    String imageUrl = 'assets/images/robot.png';
+
+    if (t.contains('سلام') || t.contains('مرحب') || t.contains('صباح')) {
+      imageUrl = 'assets/images/hello.png';
+    } else if (t.contains('شكر')) {
+      imageUrl = 'assets/images/thanks.png';
+    } else if (t.contains('نعم') || t.contains('أحتاج') || t.contains('ماء')) {
+      imageUrl = 'assets/images/yes.png';
+    } else if (t.contains('لا') || t.contains('استريح')) {
+      imageUrl = 'assets/images/no.png';
+    } else if (t.contains('عذر') || t.contains('ألم') || t.contains('طبيب')) {
+      imageUrl = 'assets/images/sorry.png';
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 30),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'حركة لغة الإشارة المعتمدة للعبارة',
+                style: TextStyle(
+                  fontFamily: 'Baloo_Bhaijaan_2',
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                height: 220,
+                decoration: BoxDecoration(
+                  color: AppColors.softPurple,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Center(
+                      child: Icon(Icons.back_hand_rounded, size: 64, color: AppColors.primaryPurple),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryPurple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    'تم وفهمت الإشارة',
+                    style: TextStyle(
+                      fontFamily: 'Baloo_Bhaijaan_2',
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -148,16 +240,10 @@ class _TtsScreenState extends State<TtsScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        drawer: const SadaDrawer(activeIndex: 2),
+        endDrawer: const SadaDrawer(activeIndex: 2),
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          leading: Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-          ),
           centerTitle: true,
           title: const Text(
             'تحويل النص إلى كلام',
@@ -175,6 +261,12 @@ class _TtsScreenState extends State<TtsScreen>
                 tooltip: 'مسح النص',
                 onPressed: () => setState(() => _textCtrl.clear()),
               ),
+            Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: AppColors.textDark),
+                onPressed: () => Scaffold.of(ctx).openEndDrawer(),
+              ),
+            ),
           ],
         ),
         body: SafeArea(
@@ -184,27 +276,27 @@ class _TtsScreenState extends State<TtsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // بطاقة الأنيميشن والموجة الصوتية
+                // 1. بطاقة الموجة الصوتية والأنيميشن التفاعلي
                 _buildWaveCard(),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
 
-                // بطاقة كتابة النص الزجاجية
+                // 2. بطاقة كتابة النص الواسعة والمريحة
                 _buildTextInputCard(),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 22),
 
-                // عبارات سريعة مقترحة
+                // 3. عبارات سريعة الاستخدام بمساحات مريحة
                 _buildQuickPhrases(),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 22),
 
-                // إعدادات الصوت (السرعة والنبرة)
+                // 4. إعدادات الصوت وسرعة النطق
                 _buildVoiceSettingsCard(),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 26),
 
-                // أزرار التحكم بالنطق
+                // 5. أزرار التحكم بالنطق
                 _buildActionButtons(),
               ],
             ),
@@ -215,64 +307,105 @@ class _TtsScreenState extends State<TtsScreen>
     );
   }
 
+  // ============================================================
+  // 1. WAVE CARD
+  // ============================================================
   Widget _buildWaveCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         gradient: AppColors.heroGradient,
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryPurple.withValues(alpha: 0.25),
-            blurRadius: 20,
+            color: AppColors.primaryPurple.withValues(alpha: 0.22),
+            blurRadius: 22,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
+      child: Stack(
         children: [
-          SizedBox(
-            width: 70,
-            height: 70,
-            child: _isSpeaking
-                ? Lottie.asset(
-                    'assets/Pronounce Animation.json',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.graphic_eq_rounded,
-                      color: AppColors.cyanLight,
-                      size: 44,
-                    ),
-                  )
-                : const Icon(
-                    Icons.record_voice_over_rounded,
-                    color: AppColors.cyanLight,
-                    size: 40,
-                  ),
+          // خلفية أنيميشن متدفقة (gradient-background.json)
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.25,
+              child: Lottie.asset(
+                'assets/gradient-background.json',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox(),
+              ),
+            ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+            child: Row(
               children: [
-                Text(
-                  _isSpeaking ? 'صدى ينطق الآن...' : 'صوتك مسموع دائماً',
-                  style: const TextStyle(
-                    fontFamily: 'Baloo_Bhaijaan_2',
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Lottie.asset(
+                      'assets/Audio&Voice-A-002.json',
+                      width: 58,
+                      height: 58,
+                      fit: BoxFit.contain,
+                      animate: _isSpeaking,
+                      errorBuilder: (_, __, ___) => _isSpeaking
+                          ? Lottie.asset(
+                              'assets/Pronounce Animation.json',
+                              width: 50,
+                              height: 50,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.graphic_eq_rounded,
+                                color: AppColors.cyanLight,
+                                size: 34,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.record_voice_over_rounded,
+                              color: AppColors.cyanLight,
+                              size: 36,
+                            ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _isSpeaking
-                      ? 'جاري نطق العبارة بصوت عربي واضح ومفهوم'
-                      : 'اكتب عبارتك وسيقوم صدى بنطقها فوراً وبدقة',
-                  style: const TextStyle(
-                    fontFamily: 'Baloo_Bhaijaan_2',
-                    fontSize: 13,
-                    color: Colors.white70,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isSpeaking ? 'صدى ينطق الآن...' : 'صوتك مسموع دائماً',
+                        style: const TextStyle(
+                          fontFamily: 'Baloo_Bhaijaan_2',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _isSpeaking
+                            ? 'جاري نطق عبارتك بصوت عربي واضح ومفهوم'
+                            : 'اكتب عبارتك وسيقوم صدى بنطقها فوراً ودعمها بالإشارة',
+                        style: const TextStyle(
+                          fontFamily: 'Baloo_Bhaijaan_2',
+                          fontSize: 13,
+                          color: Colors.white70,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -283,60 +416,71 @@ class _TtsScreenState extends State<TtsScreen>
     );
   }
 
+  // ============================================================
+  // 2. TEXT INPUT CARD
+  // ============================================================
   Widget _buildTextInputCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryPurple.withValues(alpha: 0.06),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E293B).withValues(alpha: 0.03),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // رأس البطاقة
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
                   children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.edit_note_rounded,
-                          color: AppColors.primaryPurple,
-                          size: 24,
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'نص العبارة',
-                          style: TextStyle(
-                            fontFamily: 'Baloo_Bhaijaan_2',
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.edit_note_rounded,
+                      color: AppColors.primaryPurple,
+                      size: 24,
                     ),
+                    SizedBox(width: 6),
+                    Text(
+                      'نص العبارة المطلوب نطقها',
+                      style: TextStyle(
+                        fontFamily: 'Baloo_Bhaijaan_2',
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    if (_textCtrl.text.isNotEmpty)
+                      IconButton(
+                        onPressed: () => setState(() => _textCtrl.clear()),
+                        icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textMuted),
+                        tooltip: 'مسح',
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(),
+                      ),
+                    const SizedBox(width: 6),
                     TextButton.icon(
                       onPressed: _pasteFromClipboard,
                       icon: const Icon(
                         Icons.content_paste_rounded,
-                        size: 16,
+                        size: 15,
                         color: AppColors.primaryPurple,
                       ),
                       label: const Text(
-                        'لصق النص',
+                        'لصق',
                         style: TextStyle(
                           fontFamily: 'Baloo_Bhaijaan_2',
                           fontSize: 12.5,
@@ -345,80 +489,124 @@ class _TtsScreenState extends State<TtsScreen>
                         ),
                       ),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        backgroundColor: AppColors.softPurple,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
+
+          // حقل الإدخال النصي الواسع
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: TextField(
+              controller: _textCtrl,
+              maxLines: 5,
+              minLines: 4,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontFamily: 'Baloo_Bhaijaan_2',
+                fontSize: 16.5,
+                color: AppColors.textDark,
+                height: 1.5,
               ),
-              const Divider(color: Color(0xFFF0F4FA), height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: TextField(
-                  controller: _textCtrl,
-                  maxLines: 5,
-                  minLines: 4,
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontFamily: 'Baloo_Bhaijaan_2',
-                    fontSize: 16,
-                    color: AppColors.textDark,
-                    height: 1.5,
-                  ),
-                  decoration: const InputDecoration(
-                    hintText:
-                        'اكتب هنا ما تود قوله، وسيقوم صدى بنطقه بكل وضوح...',
-                    hintStyle: TextStyle(
-                      fontFamily: 'Baloo_Bhaijaan_2',
-                      color: AppColors.textMuted,
-                      fontSize: 14,
+              decoration: const InputDecoration(
+                hintText: 'اكتب هنا ما تود قوله، وسيقوم صدى بنطقه بكل وضوح وسلاسة...',
+                hintStyle: TextStyle(
+                  fontFamily: 'Baloo_Bhaijaan_2',
+                  color: AppColors.textMuted,
+                  fontSize: 14.5,
+                ),
+                border: InputBorder.none,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+
+          // شريط إجراءات سفلي داخل البطاقة (عرض الإشارة)
+          if (_textCtrl.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: InkWell(
+                  onTap: _showSignImageDialog,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.softPurple,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    border: InputBorder.none,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.back_hand_rounded, color: AppColors.primaryPurple, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'معاينة حركة الإشارة 🤟',
+                          style: TextStyle(
+                            fontFamily: 'Baloo_Bhaijaan_2',
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primaryPurple,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  onChanged: (_) => setState(() {}),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
 
+  // ============================================================
+  // 3. QUICK PHRASES
+  // ============================================================
   Widget _buildQuickPhrases() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'عبارات سريعة الاستخدام',
+          'عبارات شائعة وسريعة الاستخدام',
           style: TextStyle(
             fontFamily: 'Baloo_Bhaijaan_2',
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: AppColors.textDark,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _quickPhrases.map((phrase) {
+          spacing: 10,
+          runSpacing: 10,
+          children: _quickPhrases.map((item) {
+            final phrase = item['text']!;
+            final icon = item['icon']!;
             final isSelected = _textCtrl.text == phrase;
+
             return InkWell(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(18),
               onTap: () {
                 setState(() => _textCtrl.text = phrase);
                 _speak();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primaryPurple : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: isSelected
-                        ? AppColors.primaryPurple
-                        : AppColors.border,
+                    color: isSelected ? AppColors.primaryPurple : AppColors.border,
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -428,14 +616,21 @@ class _TtsScreenState extends State<TtsScreen>
                     ),
                   ],
                 ),
-                child: Text(
-                  phrase,
-                  style: TextStyle(
-                    fontFamily: 'Baloo_Bhaijaan_2',
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                    color: isSelected ? Colors.white : AppColors.textDark,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(icon, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 6),
+                    Text(
+                      phrase,
+                      style: TextStyle(
+                        fontFamily: 'Baloo_Bhaijaan_2',
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        color: isSelected ? Colors.white : AppColors.textDark,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -445,12 +640,15 @@ class _TtsScreenState extends State<TtsScreen>
     );
   }
 
+  // ============================================================
+  // 4. VOICE SETTINGS CARD
+  // ============================================================
   Widget _buildVoiceSettingsCard() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -458,14 +656,10 @@ class _TtsScreenState extends State<TtsScreen>
         children: [
           const Row(
             children: [
-              Icon(
-                Icons.tune_rounded,
-                color: AppColors.primaryPurple,
-                size: 20,
-              ),
+              Icon(Icons.tune_rounded, color: AppColors.primaryPurple, size: 20),
               SizedBox(width: 8),
               Text(
-                'إعدادات الصوت',
+                'إعدادات الصوت والنبرة',
                 style: TextStyle(
                   fontFamily: 'Baloo_Bhaijaan_2',
                   fontSize: 15,
@@ -475,20 +669,16 @@ class _TtsScreenState extends State<TtsScreen>
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(
-                Icons.speed_rounded,
-                color: AppColors.textMuted,
-                size: 18,
-              ),
+              const Icon(Icons.speed_rounded, color: AppColors.textMuted, size: 18),
               const SizedBox(width: 8),
               const Text(
                 'سرعة النطق',
                 style: TextStyle(
                   fontFamily: 'Baloo_Bhaijaan_2',
-                  fontSize: 13,
+                  fontSize: 13.5,
                   color: AppColors.textDark,
                 ),
               ),
@@ -497,16 +687,14 @@ class _TtsScreenState extends State<TtsScreen>
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: AppColors.primaryPurple,
                     thumbColor: AppColors.primaryPurple,
-                    inactiveTrackColor:
-                        AppColors.primaryPurple.withValues(alpha: 0.15),
-                    trackHeight: 4,
+                    inactiveTrackColor: AppColors.primaryPurple.withValues(alpha: 0.15),
+                    trackHeight: 3.5,
                   ),
                   child: Slider(
                     value: _speechRate,
                     min: 0.2,
                     max: 1.0,
                     divisions: 8,
-                    label: '${(_speechRate * 2).toStringAsFixed(1)}x',
                     onChanged: (val) {
                       setState(() => _speechRate = val);
                       _ttsService.setRate(val);
@@ -518,7 +706,7 @@ class _TtsScreenState extends State<TtsScreen>
                 '${(_speechRate * 2).toStringAsFixed(1)}x',
                 style: const TextStyle(
                   fontFamily: 'Baloo_Bhaijaan_2',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryPurple,
                 ),
@@ -530,21 +718,24 @@ class _TtsScreenState extends State<TtsScreen>
     );
   }
 
+  // ============================================================
+  // 5. ACTION BUTTONS
+  // ============================================================
   Widget _buildActionButtons() {
     return Row(
       children: [
         // زر نطق العبارة الأساسي
         Expanded(
-          flex: 3,
+          flex: 4,
           child: Container(
-            height: 54,
+            height: 56,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(18),
               gradient: AppColors.brandGradient,
               boxShadow: [
                 BoxShadow(
                   color: AppColors.primaryPurple.withValues(alpha: 0.3),
-                  blurRadius: 16,
+                  blurRadius: 18,
                   offset: const Offset(0, 6),
                 ),
               ],
@@ -555,19 +746,19 @@ class _TtsScreenState extends State<TtsScreen>
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
               icon: const Icon(
                 Icons.volume_up_rounded,
                 color: Colors.white,
-                size: 22,
+                size: 24,
               ),
               label: const Text(
-                'نطق العبارة',
+                'نطق العبارة الآن',
                 style: TextStyle(
                   fontFamily: 'Baloo_Bhaijaan_2',
-                  fontSize: 16,
+                  fontSize: 16.5,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -576,14 +767,14 @@ class _TtsScreenState extends State<TtsScreen>
           ),
         ),
 
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
 
         // زر الإيقاف
         Container(
-          height: 54,
-          width: 54,
+          height: 56,
+          width: 56,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             color: _isSpeaking
                 ? Colors.redAccent.withValues(alpha: 0.12)
                 : AppColors.softPurple,
@@ -597,7 +788,7 @@ class _TtsScreenState extends State<TtsScreen>
             icon: Icon(
               Icons.stop_rounded,
               color: _isSpeaking ? Colors.redAccent : AppColors.textMuted,
-              size: 26,
+              size: 28,
             ),
           ),
         ),
