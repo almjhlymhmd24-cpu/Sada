@@ -17,7 +17,7 @@
 
 * **تطبيق الجوال:** Flutter & Dart
 * **الخلفية والبرمجيات:** ASP.NET Core API
-
+ ## طريقة التشغيل
 <p align="center">
   <img src="screenshots/Splash-Screen.jpg" width="220" alt="Splash Screen">
   <img src="screenshots/Home-Screen.jpg" width="220" alt="Home Screen">
@@ -26,6 +26,7 @@
   <img src="screenshots/Chat-Screen.jpg" width="220" alt="Chat Screen">
   <img src="screenshots/AiAssisent-Screen.jpg" width="220" alt="AI Assistant Screen">
   <img src="screenshots/Dactionary-Screen.jpg" width="220" alt="Dictionary Screen">
+ 
   <img src="screenshots/TTS-Screen.jpg" width="220" alt="TTS Screen">
   <img src="screenshots/Profile-Screen.jpg" width="220" alt="Profile Screen">
   <img src="screenshots/onboarding-Screen1.jpg" width="220" alt="Onboarding 1">
