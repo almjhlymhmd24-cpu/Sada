@@ -14,7 +14,7 @@ class ApiService {
   static String? customBaseUrl;
 
   // القيمة الافتراضية لـ IP جهاز الكمبيوتر على الشبكة المحلية الحالية
-  static String defaultAndroidHost = '192.168.96.34';
+  static String defaultAndroidHost = '192.168.246.34';
   static int defaultPort = 54707;
 
   // للتشغيل على Windows / Web استخدمي localhost
